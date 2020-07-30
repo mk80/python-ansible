@@ -1,11 +1,10 @@
 #!/usr/bin/python3
 
-# use ansible to determine connection and copy over a file
+# use ansible python api to determine connection and copy over a file
 
 import os
 import json
 import yaml
-#import shutil
 import socket
 from ansible.module_utils.common.collections import ImmutableDict
 from ansible.parsing.dataloader import DataLoader
@@ -19,14 +18,13 @@ import ansible.constants as C
 
 pwd = os.getcwd()
 
+# result management to display or even store and use later.. this one just displays atm
 class ResultCallback(CallbackBase):
     def v2_runner_on_ok(self, result, **kwargs):
         host = result._host
         print(json.dumps({host.name: result._result}, indent=4))
 
-context.CLIARGS = ImmutableDict(connection='local', module_path=['/usr/lib/python3/dist-packages/ansible'], forks=10, become=None,
-                                become_method=None, become_user=None, check=False, diff=False)
-
+# build inventory, variable, playbook and finally run with task queue manager
 def playbook(host_play):
     loader = DataLoader()
 
@@ -63,6 +61,7 @@ def playbook(host_play):
             tqm.cleanup()
     return(result)
 
+# determine whether the port is open and return boolean
 def check_port(host, port):
     socket_check = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     print(host)
@@ -77,14 +76,21 @@ def check_port(host, port):
         socket_check.close()
         return(False)
 
+# cli args getting set because ansible depends on them
+context.CLIARGS = ImmutableDict(connection='local', module_path=['/usr/lib/python3/dist-packages/ansible'], forks=10, become=None,
+                                become_method=None, become_user=None, check=False, diff=False)
+
+# host lists depending on ports being open... 22(ssh) or 5985(winrm)
 linux_list = []
 win_list = []
 
 results_callback = ResultCallback()
 
+# read in hosts
 with open(pwd + '/vars.yaml', 'r') as v:
     input_hosts = yaml.safe_load(v)
 
+# check open ports and build lists
 for k,v in input_hosts.items():
     for i in v:
         if (check_port(i, 22)):
@@ -95,6 +101,7 @@ for k,v in input_hosts.items():
         if (check_port(i, 5985)):
             win_list.append(i)
 
+# run tasks from playbook
 if (len(linux_list) > 0):
     print("Linux hosts:\n")
     for host in linux_list:
