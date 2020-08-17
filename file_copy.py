@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 # use ansible python api to determine connection and copy over a file
 
 import os
